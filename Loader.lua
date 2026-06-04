@@ -5,7 +5,7 @@
 -- ============================================
 
 -- ★★★ 替换为你仓库里 Main.lua 的 raw 链接 ★★★
-local MAIN_SCRIPT_URL = "https://raw.githubusercontent.com/你的用户名/你的仓库/main/Main.lua"
+local MAIN_SCRIPT_URL = "https://github.com/GGG792/Fnb/blob/main/Main.lua"
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
