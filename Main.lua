@@ -1,5 +1,5 @@
 -- ============================================
--- F脚本中心 - 完整功能版 v4.0（含赞助图片）
+-- F脚本中心 - 完整功能版 v4.0（含赞助图片 + 失败提示）
 -- 功能：飞行、旋转、环绕、无头、燃烧、烟雾、
 --        加速、跳跃、穿墙、ESP、赞助
 -- ============================================
@@ -151,7 +151,7 @@ local PlayerScroll = Instance.new("ScrollingFrame"); PlayerScroll.Parent = Playe
 local PlayerListLayout = Instance.new("UIListLayout"); PlayerListLayout.Parent = PlayerScroll; PlayerListLayout.Padding = UDim.new(0,5)
 
 -- ============================================
--- 功能按钮列表（保留原功能 + 赞助）
+-- 功能按钮列表
 -- ============================================
 local scripts = {
     {name = "✈️ 启用飞行", color = Color3.fromRGB(0, 162, 255), id = "fly"},
@@ -192,7 +192,7 @@ for i, scriptInfo in ipairs(scripts) do
 end
 
 -- ============================================
--- 赞助图片显示（本地绘图，带关闭按钮）
+-- 赞助图片显示（带失败处理）
 -- ============================================
 local sponsorImage = nil
 local sponsorCloseBtn = {}
@@ -207,15 +207,67 @@ end
 
 local function showSponsorImage()
     clearSponsorDrawings()
+
     local imageData
     local success = pcall(function()
         imageData = HttpService:GetAsync(IMAGE_URL)
     end)
+
     if not success or not imageData then
-        game:GetService("StarterGui"):SetCore("SendNotification", {Title = "加载失败", Text = "赞助图片加载失败", Duration = 3})
+        -- 图片加载失败：复制链接到剪贴板 + 全屏大字
+        pcall(function()
+            setclipboard(IMAGE_URL)
+        end)
+
+        local screenSize = Camera.ViewportSize
+
+        local failBg = Drawing.new("Square")
+        failBg.Size = Vector2.new(screenSize.X, screenSize.Y)
+        failBg.Position = Vector2.new(0, 0)
+        failBg.Color = Color3.fromRGB(0, 0, 0)
+        failBg.Transparency = 0.7
+        failBg.Visible = true
+        table.insert(sponsorCloseBtn, failBg)
+
+        local failText = Drawing.new("Text")
+        failText.Text = "赞助图片加载失败\n链接已复制到剪贴板\n请用浏览器打开链接查看"
+        failText.Size = 50
+        failText.Color = Color3.fromRGB(255, 50, 50)
+        failText.Font = Drawing.Fonts.System
+        failText.Center = true
+        failText.Position = Vector2.new(screenSize.X/2, screenSize.Y/2 - 50)
+        failText.Visible = true
+        table.insert(sponsorCloseBtn, failText)
+
+        local linkText = Drawing.new("Text")
+        linkText.Text = IMAGE_URL
+        linkText.Size = 20
+        linkText.Color = Color3.fromRGB(255, 255, 255)
+        linkText.Font = Drawing.Fonts.System
+        linkText.Center = true
+        linkText.Position = Vector2.new(screenSize.X/2, screenSize.Y/2 + 50)
+        linkText.Visible = true
+        table.insert(sponsorCloseBtn, linkText)
+
+        local clickConnection
+        clickConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                clearSponsorDrawings()
+                clickConnection:Disconnect()
+            end
+        end)
+
+        task.delay(5, function()
+            if failBg and failBg.Visible then
+                clearSponsorDrawings()
+                if clickConnection then clickConnection:Disconnect() end
+            end
+        end)
         return
     end
 
+    -- 图片加载成功，正常显示
     local screenSize = Camera.ViewportSize
     local imgW, imgH = 300, 300
     local posX = screenSize.X/2 - imgW/2
