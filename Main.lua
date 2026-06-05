@@ -1,7 +1,6 @@
 -- ============================================
--- F脚本中心 - 完整功能版 v4.0（含赞助图片 + 失败提示）
--- 功能：飞行、旋转、环绕、无头、燃烧、烟雾、
---        加速、跳跃、穿墙、ESP、赞助
+-- F脚本中心 - 作者尊享版 v4.2
+-- 彩色边框 + 动画 + 玩家信息 + 作者识别 + 启动提示
 -- ============================================
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -11,8 +10,42 @@ local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local Camera = workspace.CurrentCamera
 
+-- ★ 作者用户名
+local AUTHOR_NAME = "noobnewfggg"
+
 -- ★ 你的收款码图片直链
 local IMAGE_URL = "https://i.imgur.com/h35hvJb.png"
+
+-- ★ VIP 用户ID列表（数字ID）
+local VIP_USERS = {
+    [000000000] = true,  -- 可添加更多VIP用户ID
+}
+
+-- ============================================
+-- 判断当前玩家身份
+-- ============================================
+local isAuthor = (LocalPlayer.Name == AUTHOR_NAME)
+local roleText, roleColor
+if isAuthor then
+    roleText = "👑 作者"
+    roleColor = Color3.fromRGB(255, 215, 0)
+elseif VIP_USERS[LocalPlayer.UserId] then
+    roleText = "🌟 VIP 用户"
+    roleColor = Color3.fromRGB(255, 215, 0)
+else
+    roleText = "普通用户"
+    roleColor = Color3.fromRGB(200, 200, 200)
+end
+
+-- ============================================
+-- 启动时欢迎提示
+-- ============================================
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "F脚本中心 v4.2",
+    Text = isAuthor and "欢迎 F脚本作者" or "欢迎使用，作者："..AUTHOR_NAME,
+    Duration = 5,
+    Icon = "rbxassetid://7734068321"
+})
 
 -- ============================================
 -- 创建主界面
@@ -23,12 +56,11 @@ ScreenGui.Parent = LocalPlayer.PlayerGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- 主框架
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.Size = UDim2.new(0, 500, 0, 350)
-MainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
+MainFrame.Size = UDim2.new(0, 520, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -260, 0.5, -200)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -39,6 +71,19 @@ MainFrame.Visible = false
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 12)
 MainCorner.Parent = MainFrame
+
+-- 彩色流光边框
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Thickness = 3
+MainStroke.Transparency = 0.2
+MainStroke.Parent = MainFrame
+coroutine.wrap(function()
+    while MainStroke and MainStroke.Parent do
+        local hue = (tick() * 0.5) % 1
+        MainStroke.Color = Color3.fromHSV(hue, 1, 1)
+        RunService.RenderStepped:Wait()
+    end
+end)()
 
 -- 左上角 F 图标
 local FIcon = Instance.new("TextLabel")
@@ -70,7 +115,7 @@ SubTitle.Parent = MainFrame
 SubTitle.Size = UDim2.new(0, 200, 0, 18)
 SubTitle.Position = UDim2.new(0, 85, 0, 45)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "F Script Hub Mobile v4.0"
+SubTitle.Text = "作者尊享版 v4.2"
 SubTitle.TextColor3 = Color3.fromRGB(150, 150, 160)
 SubTitle.TextSize = 12
 SubTitle.Font = Enum.Font.Gotham
@@ -104,19 +149,78 @@ ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 local ScrollCorner = Instance.new("UICorner"); ScrollCorner.CornerRadius = UDim.new(0,8); ScrollCorner.Parent = ScrollFrame
 local ScrollLayout = Instance.new("UIListLayout"); ScrollLayout.Parent = ScrollFrame; ScrollLayout.Padding = UDim.new(0,8); ScrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- 左侧内容区
+-- 左侧内容区（包含玩家信息和功能描述）
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Parent = MainFrame
-ContentFrame.Size = UDim2.new(1, -200, 1, -80)
+ContentFrame.Size = UDim2.new(1, -210, 1, -80)
 ContentFrame.Position = UDim2.new(0, 10, 0, 70)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 ContentFrame.BorderSizePixel = 0
 local ContentCorner = Instance.new("UICorner"); ContentCorner.CornerRadius = UDim.new(0,8); ContentCorner.Parent = ContentFrame
 
+-- 玩家信息面板
+local PlayerInfoFrame = Instance.new("Frame")
+PlayerInfoFrame.Parent = ContentFrame
+PlayerInfoFrame.Size = UDim2.new(1, -10, 0, 80)
+PlayerInfoFrame.Position = UDim2.new(0, 5, 0, 5)
+PlayerInfoFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+PlayerInfoFrame.BorderSizePixel = 0
+local PlayerInfoCorner = Instance.new("UICorner"); PlayerInfoCorner.CornerRadius = UDim.new(0,8); PlayerInfoCorner.Parent = PlayerInfoFrame
+
+local AvatarImage = Instance.new("ImageLabel")
+AvatarImage.Parent = PlayerInfoFrame
+AvatarImage.Size = UDim2.new(0, 60, 0, 60)
+AvatarImage.Position = UDim2.new(0, 10, 0, 10)
+AvatarImage.BackgroundTransparency = 1
+coroutine.wrap(function()
+    local userId = LocalPlayer.UserId
+    local content = Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+    AvatarImage.Image = content
+end)()
+
+local NameLabel = Instance.new("TextLabel")
+NameLabel.Parent = PlayerInfoFrame
+NameLabel.Size = UDim2.new(1, -80, 0, 22)
+NameLabel.Position = UDim2.new(0, 80, 0, 10)
+NameLabel.BackgroundTransparency = 1
+NameLabel.Text = LocalPlayer.DisplayName.." (@"..LocalPlayer.Name..")"
+NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+NameLabel.TextSize = 16
+NameLabel.Font = Enum.Font.GothamBold
+NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local RoleLabel = Instance.new("TextLabel")
+RoleLabel.Parent = PlayerInfoFrame
+RoleLabel.Size = UDim2.new(1, -80, 0, 18)
+RoleLabel.Position = UDim2.new(0, 80, 0, 35)
+RoleLabel.BackgroundTransparency = 1
+RoleLabel.Text = roleText
+RoleLabel.TextColor3 = roleColor
+RoleLabel.TextSize = 14
+RoleLabel.Font = Enum.Font.Gotham
+RoleLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local TimeLabel = Instance.new("TextLabel")
+TimeLabel.Parent = PlayerInfoFrame
+TimeLabel.Size = UDim2.new(1, -80, 0, 18)
+TimeLabel.Position = UDim2.new(0, 80, 0, 55)
+TimeLabel.BackgroundTransparency = 1
+TimeLabel.Text = ""
+TimeLabel.TextColor3 = Color3.fromRGB(180, 180, 255)
+TimeLabel.TextSize = 13
+TimeLabel.Font = Enum.Font.Gotham
+TimeLabel.TextXAlignment = Enum.TextXAlignment.Left
+coroutine.wrap(function()
+    while TimeLabel and TimeLabel.Parent do
+        TimeLabel.Text = os.date("%Y-%m-%d %H:%M:%S")
+        task.wait(1)
+    end
+end)()
+
 local WelcomeLabel = Instance.new("TextLabel")
 WelcomeLabel.Parent = ContentFrame
 WelcomeLabel.Size = UDim2.new(1, -20, 0, 30)
-WelcomeLabel.Position = UDim2.new(0, 10, 0, 10)
+WelcomeLabel.Position = UDim2.new(0, 10, 0, 90)
 WelcomeLabel.BackgroundTransparency = 1
 WelcomeLabel.Text = "欢迎使用 F脚本中心"
 WelcomeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -125,10 +229,10 @@ WelcomeLabel.Font = Enum.Font.GothamBold
 
 local InfoLabel = Instance.new("TextLabel")
 InfoLabel.Parent = ContentFrame
-InfoLabel.Size = UDim2.new(1, -20, 0, 120)
-InfoLabel.Position = UDim2.new(0, 10, 0, 45)
+InfoLabel.Size = UDim2.new(1, -20, 0, 80)
+InfoLabel.Position = UDim2.new(0, 10, 0, 125)
 InfoLabel.BackgroundTransparency = 1
-InfoLabel.Text = "点击右侧按钮选择功能\n按住飞行按钮 + 摇杆控制飞行"
+InfoLabel.Text = "点击右侧按钮选择功能\n按住飞行按钮 + 摇杆控制飞行\n作者: "..AUTHOR_NAME
 InfoLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
 InfoLabel.TextSize = 12
 InfoLabel.Font = Enum.Font.Gotham
@@ -167,7 +271,7 @@ local scripts = {
     {name = "💰 赞助作者", color = Color3.fromRGB(255, 215, 0), id = "sponsor"},
 }
 
--- 创建按钮
+-- 创建按钮（含缩放动画）
 for i, scriptInfo in ipairs(scripts) do
     local btn = Instance.new("TextButton")
     btn.Name = scriptInfo.id .. "Btn"
@@ -181,14 +285,23 @@ for i, scriptInfo in ipairs(scripts) do
     btn.Font = Enum.Font.GothamBold
     btn.BorderSizePixel = 0
     btn.LayoutOrder = i
-    btn.AutoButtonColor = true
+    btn.AutoButtonColor = false
 
     local btnCorner = Instance.new("UICorner"); btnCorner.CornerRadius = UDim.new(0,8); btnCorner.Parent = btn
     local colorBar = Instance.new("Frame"); colorBar.Size = UDim2.new(0,4,1,0); colorBar.BackgroundColor3 = scriptInfo.color; colorBar.BorderSizePixel = 0; colorBar.Parent = btn
     local colorBarCorner = Instance.new("UICorner"); colorBarCorner.CornerRadius = UDim.new(0,8); colorBarCorner.Parent = colorBar
 
-    btn.MouseEnter:Connect(function() TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(55,55,70)}):Play() end)
-    btn.MouseLeave:Connect(function() TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45,45,55)}):Play() end)
+    local enterTween = TweenService:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -10, 0, 44)})
+    local leaveTween = TweenService:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -16, 0, 40)})
+
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(55,55,70)}):Play()
+        enterTween:Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45,45,55)}):Play()
+        leaveTween:Play()
+    end)
 end
 
 -- ============================================
@@ -207,48 +320,17 @@ end
 
 local function showSponsorImage()
     clearSponsorDrawings()
-
     local imageData
     local success = pcall(function()
         imageData = HttpService:GetAsync(IMAGE_URL)
     end)
 
     if not success or not imageData then
-        -- 图片加载失败：复制链接到剪贴板 + 全屏大字
-        pcall(function()
-            setclipboard(IMAGE_URL)
-        end)
-
+        pcall(function() setclipboard(IMAGE_URL) end)
         local screenSize = Camera.ViewportSize
-
-        local failBg = Drawing.new("Square")
-        failBg.Size = Vector2.new(screenSize.X, screenSize.Y)
-        failBg.Position = Vector2.new(0, 0)
-        failBg.Color = Color3.fromRGB(0, 0, 0)
-        failBg.Transparency = 0.7
-        failBg.Visible = true
-        table.insert(sponsorCloseBtn, failBg)
-
-        local failText = Drawing.new("Text")
-        failText.Text = "赞助图片加载失败\n链接已复制到剪贴板\n请用浏览器打开链接查看"
-        failText.Size = 50
-        failText.Color = Color3.fromRGB(255, 50, 50)
-        failText.Font = Drawing.Fonts.System
-        failText.Center = true
-        failText.Position = Vector2.new(screenSize.X/2, screenSize.Y/2 - 50)
-        failText.Visible = true
-        table.insert(sponsorCloseBtn, failText)
-
-        local linkText = Drawing.new("Text")
-        linkText.Text = IMAGE_URL
-        linkText.Size = 20
-        linkText.Color = Color3.fromRGB(255, 255, 255)
-        linkText.Font = Drawing.Fonts.System
-        linkText.Center = true
-        linkText.Position = Vector2.new(screenSize.X/2, screenSize.Y/2 + 50)
-        linkText.Visible = true
-        table.insert(sponsorCloseBtn, linkText)
-
+        local failBg = Drawing.new("Square"); failBg.Size = Vector2.new(screenSize.X, screenSize.Y); failBg.Position = Vector2.new(0,0); failBg.Color = Color3.fromRGB(0,0,0); failBg.Transparency = 0.7; failBg.Visible = true; table.insert(sponsorCloseBtn, failBg)
+        local failText = Drawing.new("Text"); failText.Text = "赞助图片加载失败\n链接已复制到剪贴板\n请用浏览器打开链接查看"; failText.Size = 50; failText.Color = Color3.fromRGB(255,50,50); failText.Font = Drawing.Fonts.System; failText.Center = true; failText.Position = Vector2.new(screenSize.X/2, screenSize.Y/2-50); failText.Visible = true; table.insert(sponsorCloseBtn, failText)
+        local linkText = Drawing.new("Text"); linkText.Text = IMAGE_URL; linkText.Size = 20; linkText.Color = Color3.fromRGB(255,255,255); linkText.Font = Drawing.Fonts.System; linkText.Center = true; linkText.Position = Vector2.new(screenSize.X/2, screenSize.Y/2+50); linkText.Visible = true; table.insert(sponsorCloseBtn, linkText)
         local clickConnection
         clickConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if gameProcessed then return end
@@ -257,7 +339,6 @@ local function showSponsorImage()
                 clickConnection:Disconnect()
             end
         end)
-
         task.delay(5, function()
             if failBg and failBg.Visible then
                 clearSponsorDrawings()
@@ -267,45 +348,15 @@ local function showSponsorImage()
         return
     end
 
-    -- 图片加载成功，正常显示
     local screenSize = Camera.ViewportSize
     local imgW, imgH = 300, 300
     local posX = screenSize.X/2 - imgW/2
     local posY = screenSize.Y/2 - imgH/2 - 20
-
-    sponsorBg = Drawing.new("Square")
-    sponsorBg.Size = Vector2.new(screenSize.X, screenSize.Y)
-    sponsorBg.Position = Vector2.new(0, 0)
-    sponsorBg.Color = Color3.fromRGB(0, 0, 0)
-    sponsorBg.Transparency = 0.5
-    sponsorBg.Visible = true
-
-    sponsorImage = Drawing.new("Image")
-    sponsorImage.Data = imageData
-    sponsorImage.Size = Vector2.new(imgW, imgH)
-    sponsorImage.Position = Vector2.new(posX, posY)
-    sponsorImage.Visible = true
-
-    local btnW, btnH = 80, 30
-    local closeX = posX + imgW/2 - btnW/2
-    local closeY = posY + imgH + 10
-
-    local closeBg = Drawing.new("Square")
-    closeBg.Size = Vector2.new(btnW, btnH)
-    closeBg.Position = Vector2.new(closeX, closeY)
-    closeBg.Color = Color3.fromRGB(255, 70, 70)
-    closeBg.Visible = true
-    table.insert(sponsorCloseBtn, closeBg)
-
-    local closeText = Drawing.new("Text")
-    closeText.Text = "关闭"
-    closeText.Size = 20
-    closeText.Color = Color3.fromRGB(255, 255, 255)
-    closeText.Font = Drawing.Fonts.System
-    closeText.Position = Vector2.new(closeX + btnW/2 - 16, closeY + 4)
-    closeText.Visible = true
-    table.insert(sponsorCloseBtn, closeText)
-
+    sponsorBg = Drawing.new("Square"); sponsorBg.Size = Vector2.new(screenSize.X, screenSize.Y); sponsorBg.Position = Vector2.new(0,0); sponsorBg.Color = Color3.fromRGB(0,0,0); sponsorBg.Transparency = 0.5; sponsorBg.Visible = true
+    sponsorImage = Drawing.new("Image"); sponsorImage.Data = imageData; sponsorImage.Size = Vector2.new(imgW, imgH); sponsorImage.Position = Vector2.new(posX, posY); sponsorImage.Visible = true
+    local btnW, btnH = 80, 30; local closeX = posX + imgW/2 - btnW/2; local closeY = posY + imgH + 10
+    local closeBg = Drawing.new("Square"); closeBg.Size = Vector2.new(btnW, btnH); closeBg.Position = Vector2.new(closeX, closeY); closeBg.Color = Color3.fromRGB(255,70,70); closeBg.Visible = true; table.insert(sponsorCloseBtn, closeBg)
+    local closeText = Drawing.new("Text"); closeText.Text = "关闭"; closeText.Size = 20; closeText.Color = Color3.fromRGB(255,255,255); closeText.Font = Drawing.Fonts.System; closeText.Position = Vector2.new(closeX + btnW/2 - 16, closeY + 4); closeText.Visible = true; table.insert(sponsorCloseBtn, closeText)
     local clickConnection
     clickConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
@@ -653,12 +704,10 @@ end
 -- ============================================
 local espEnabled = false
 local espObjects = {}
-
 local function clearESP()
     for _, obj in ipairs(espObjects) do if obj and obj.Parent then obj:Destroy() end end
     espObjects = {}
 end
-
 local function createESP()
     clearESP()
     for _, player in ipairs(Players:GetPlayers()) do
@@ -670,7 +719,6 @@ local function createESP()
             if head and hrp and hum then
                 local hl = Instance.new("Highlight"); hl.FillColor = Color3.fromRGB(255,0,0); hl.FillTransparency = 0.7; hl.OutlineColor = Color3.fromRGB(255,255,255); hl.OutlineTransparency = 0; hl.Parent = char
                 table.insert(espObjects, hl)
-
                 local bb = Instance.new("BillboardGui"); bb.Adornee = head; bb.Size = UDim2.new(0,100,0,40); bb.StudsOffset = Vector3.new(0,3,0); bb.AlwaysOnTop = true; bb.Parent = char
                 local nameLabel = Instance.new("TextLabel"); nameLabel.Size = UDim2.new(1,0,0,20); nameLabel.BackgroundTransparency = 1; nameLabel.Text = player.Name; nameLabel.TextColor3 = Color3.fromRGB(255,255,255); nameLabel.TextSize = 14; nameLabel.Font = Enum.Font.GothamBold; nameLabel.TextStrokeTransparency = 0; nameLabel.Parent = bb
                 local healthBg = Instance.new("Frame"); healthBg.Size = UDim2.new(1,0,0,6); healthBg.Position = UDim2.new(0,0,0,22); healthBg.BackgroundColor3 = Color3.fromRGB(50,50,50); healthBg.BorderSizePixel = 0; healthBg.Parent = bb
@@ -682,7 +730,6 @@ local function createESP()
         end
     end
 end
-
 local espUpdateConnection
 local function startESPUpdate()
     espUpdateConnection = RunService.RenderStepped:Connect(function()
@@ -715,11 +762,9 @@ local function startESPUpdate()
         end
     end)
 end
-
 local function stopESPUpdate()
     if espUpdateConnection then espUpdateConnection:Disconnect(); espUpdateConnection = nil end
 end
-
 local playerAddedConnection
 local function enableESP()
     espEnabled = true; createESP(); startESPUpdate()
@@ -727,12 +772,10 @@ local function enableESP()
         player.CharacterAdded:Connect(function() task.wait(1); if espEnabled then createESP() end end)
     end)
 end
-
 local function disableESP()
     espEnabled = false; clearESP(); stopESPUpdate()
     if playerAddedConnection then playerAddedConnection:Disconnect(); playerAddedConnection = nil end
 end
-
 local espBtn = ScrollFrame:FindFirstChild("espBtn")
 if espBtn then
     espBtn.MouseButton1Click:Connect(function()
@@ -745,7 +788,7 @@ if espBtn then
 end
 
 -- ============================================
--- 打开按钮（屏幕边缘）
+-- 打开按钮（屏幕边缘）+ 弹入动画
 -- ============================================
 local openBtn = Instance.new("TextButton")
 openBtn.Parent = ScreenGui
@@ -758,7 +801,15 @@ openBtn.TextSize = 24
 openBtn.Font = Enum.Font.GothamBlack
 openBtn.BorderSizePixel = 0
 local openBtnCorner = Instance.new("UICorner"); openBtnCorner.CornerRadius = UDim.new(0,12); openBtnCorner.Parent = openBtn
-openBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+openBtn.MouseButton1Click:Connect(function()
+    if not MainFrame.Visible then
+        MainFrame.Visible = true
+        MainFrame.Size = UDim2.new(0, 0, 0, 0)
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 520, 0, 400)}):Play()
+    else
+        MainFrame.Visible = false
+    end
+end)
 
 -- ============================================
 -- 重生处理：恢复所有状态
@@ -797,32 +848,11 @@ LocalPlayer.CharacterAdded:Connect(function(character)
             stopOrbit()
         end
     end
-    if headlessEnabled then
-        task.wait(0.5); toggleHeadless(); toggleHeadless()
-    end
-    if fireEnabled then
-        task.wait(0.5); toggleFire(); toggleFire()
-    end
-    if smokeEnabled then
-        task.wait(0.5); toggleSmoke(); toggleSmoke()
-    end
-    if speedEnabled then
-        task.wait(0.5); toggleSpeed(); toggleSpeed()
-    end
-    if jumpEnabled then
-        task.wait(0.5); toggleJump(); toggleJump()
-    end
-    if noclipEnabled then
-        -- noclipConnection 会自动处理新角色
-    end
-    if espEnabled then
-        task.wait(1); createESP()
-    end
+    if headlessEnabled then task.wait(0.5); toggleHeadless(); toggleHeadless() end
+    if fireEnabled then task.wait(0.5); toggleFire(); toggleFire() end
+    if smokeEnabled then task.wait(0.5); toggleSmoke(); toggleSmoke() end
+    if speedEnabled then task.wait(0.5); toggleSpeed(); toggleSpeed() end
+    if jumpEnabled then task.wait(0.5); toggleJump(); toggleJump() end
+    if noclipEnabled then end
+    if espEnabled then task.wait(1); createESP() end
 end)
-
--- 启动通知
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "F脚本中心 v4.0",
-    Text = "所有功能就绪 | 点击左侧 F 打开界面",
-    Duration = 4
-})
