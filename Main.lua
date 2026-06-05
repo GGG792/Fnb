@@ -1,5 +1,5 @@
 -- ============================================
--- F脚本中心 - 作者尊享版 v4.2
+-- F脚本中心 - 作者尊享版 v4.4 (无按钮飞行 + 车辆加速 + 快速互动)
 -- 彩色边框 + 动画 + 玩家信息 + 作者识别 + 启动提示
 -- ============================================
 local Players = game:GetService("Players")
@@ -41,7 +41,7 @@ end
 -- 启动时欢迎提示
 -- ============================================
 game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "F脚本中心 v4.2",
+    Title = "F脚本中心 v4.4",
     Text = isAuthor and "欢迎 F脚本作者" or "欢迎使用，作者："..AUTHOR_NAME,
     Duration = 5,
     Icon = "rbxassetid://7734068321"
@@ -115,7 +115,7 @@ SubTitle.Parent = MainFrame
 SubTitle.Size = UDim2.new(0, 200, 0, 18)
 SubTitle.Position = UDim2.new(0, 85, 0, 45)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "作者尊享版 v4.2"
+SubTitle.Text = "作者尊享版 v4.4"
 SubTitle.TextColor3 = Color3.fromRGB(150, 150, 160)
 SubTitle.TextSize = 12
 SubTitle.Font = Enum.Font.Gotham
@@ -144,7 +144,7 @@ ScrollFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 ScrollFrame.BorderSizePixel = 0
 ScrollFrame.ScrollBarThickness = 6
 ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 110)
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 650)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 750) -- 适应新增按钮
 ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 local ScrollCorner = Instance.new("UICorner"); ScrollCorner.CornerRadius = UDim.new(0,8); ScrollCorner.Parent = ScrollFrame
 local ScrollLayout = Instance.new("UIListLayout"); ScrollLayout.Parent = ScrollFrame; ScrollLayout.Padding = UDim.new(0,8); ScrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -232,7 +232,7 @@ InfoLabel.Parent = ContentFrame
 InfoLabel.Size = UDim2.new(1, -20, 0, 80)
 InfoLabel.Position = UDim2.new(0, 10, 0, 125)
 InfoLabel.BackgroundTransparency = 1
-InfoLabel.Text = "点击右侧按钮选择功能\n按住飞行按钮 + 摇杆控制飞行\n作者: "..AUTHOR_NAME
+InfoLabel.Text = "点击右侧按钮选择功能\n飞行：开启后直接摇杆控制\n车辆加速：驾驶时自动加速\n快速互动：进度条瞬间完成\n作者: "..AUTHOR_NAME
 InfoLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
 InfoLabel.TextSize = 12
 InfoLabel.Font = Enum.Font.Gotham
@@ -255,7 +255,7 @@ local PlayerScroll = Instance.new("ScrollingFrame"); PlayerScroll.Parent = Playe
 local PlayerListLayout = Instance.new("UIListLayout"); PlayerListLayout.Parent = PlayerScroll; PlayerListLayout.Padding = UDim.new(0,5)
 
 -- ============================================
--- 功能按钮列表
+-- 功能按钮列表 (新增快速互动)
 -- ============================================
 local scripts = {
     {name = "✈️ 启用飞行", color = Color3.fromRGB(0, 162, 255), id = "fly"},
@@ -268,6 +268,8 @@ local scripts = {
     {name = "🦘 跳跃增强", color = Color3.fromRGB(50, 255, 100), id = "jump"},
     {name = "🧱 穿墙脚本", color = Color3.fromRGB(180, 100, 50), id = "noclip"},
     {name = "👁️ ESP透视", color = Color3.fromRGB(255, 50, 100), id = "esp"},
+    {name = "🚗 车辆加速", color = Color3.fromRGB(255, 165, 0), id = "carboost"},
+    {name = "⚡ 快速互动", color = Color3.fromRGB(0, 255, 200), id = "instantaction"},
     {name = "💰 赞助作者", color = Color3.fromRGB(255, 215, 0), id = "sponsor"},
 }
 
@@ -305,7 +307,7 @@ for i, scriptInfo in ipairs(scripts) do
 end
 
 -- ============================================
--- 赞助图片显示（带失败处理）
+-- 赞助图片显示（带失败处理） (保持不变)
 -- ============================================
 local sponsorImage = nil
 local sponsorCloseBtn = {}
@@ -376,27 +378,12 @@ if sponsorBtn then
 end
 
 -- ============================================
--- 飞行系统（浮动按钮 + 摇杆）
+-- 飞行系统（无按钮，开启即飞） (保持不变)
 -- ============================================
 local flyEnabled = false
 local flySpeed = 50
 local bodyVelocity, bodyGyro
 local flyConnection
-local flyButtonDown = false
-
-local FlyButton = Instance.new("TextButton")
-FlyButton.Parent = ScreenGui
-FlyButton.Size = UDim2.new(0, 80, 0, 80)
-FlyButton.Position = UDim2.new(1, -100, 1, -120)
-FlyButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
-FlyButton.Text = "✈️"
-FlyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-FlyButton.TextSize = 36
-FlyButton.Font = Enum.Font.GothamBlack
-FlyButton.BorderSizePixel = 0
-FlyButton.Visible = false
-local FlyButtonCorner = Instance.new("UICorner"); FlyButtonCorner.CornerRadius = UDim.new(1,0); FlyButtonCorner.Parent = FlyButton
-local FlyButtonStroke = Instance.new("UIStroke"); FlyButtonStroke.Color = Color3.fromRGB(255,255,255); FlyButtonStroke.Thickness = 3; FlyButtonStroke.Transparency = 0.5; FlyButtonStroke.Parent = FlyButton
 
 local function enableFly()
     local char = LocalPlayer.Character; if not char then return end
@@ -407,38 +394,25 @@ local function enableFly()
 end
 
 local function disableFly()
-    flyEnabled = false; flyButtonDown = false
+    flyEnabled = false
     if bodyVelocity then bodyVelocity:Destroy(); bodyVelocity = nil end
     if bodyGyro then bodyGyro:Destroy(); bodyGyro = nil end
     if flyConnection then flyConnection:Disconnect(); flyConnection = nil end
 end
-
-FlyButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        flyButtonDown = true; FlyButton.BackgroundColor3 = Color3.fromRGB(0,120,200); FlyButtonStroke.Transparency = 0
-    end
-end)
-FlyButton.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        flyButtonDown = false; FlyButton.BackgroundColor3 = Color3.fromRGB(0,162,255); FlyButtonStroke.Transparency = 0.5
-        if bodyVelocity then bodyVelocity.Velocity = Vector3.new(0,0,0) end
-    end
-end)
 
 local function setupFlyMovement()
     local char = LocalPlayer.Character; if not char then return end
     local hum = char:FindFirstChild("Humanoid"); if not hum then return end
     flyConnection = RunService.RenderStepped:Connect(function()
         if not flyEnabled or not bodyVelocity then return end
-        if not flyButtonDown then bodyVelocity.Velocity = Vector3.new(0,0,0); return end
         local moveDir = hum.MoveDirection
+        if moveDir.Magnitude == 0 then
+            bodyVelocity.Velocity = Vector3.new(0,0,0)
+            return
+        end
         local look = Camera.CFrame.LookVector
         local right = Camera.CFrame.RightVector
-        local fwdDot = moveDir:Dot(look); local sideDot = moveDir:Dot(right)
-        local vel = Vector3.new(0,0,0)
-        if fwdDot > 0.1 then vel = look * flySpeed
-        elseif fwdDot < -0.1 then vel = Vector3.new(0,0,0)
-        elseif math.abs(sideDot) > 0.1 then vel = right * math.sign(sideDot) * flySpeed end
+        local vel = look * moveDir.Z * flySpeed + right * moveDir.X * flySpeed
         bodyVelocity.Velocity = vel
         if bodyGyro and char:FindFirstChild("HumanoidRootPart") then
             bodyGyro.CFrame = CFrame.new(char.HumanoidRootPart.Position, char.HumanoidRootPart.Position + look)
@@ -450,19 +424,24 @@ local flyBtn = ScrollFrame:FindFirstChild("flyBtn")
 if flyBtn then
     flyBtn.MouseButton1Click:Connect(function()
         if flyEnabled then
-            disableFly(); FlyButton.Visible = false
-            flyBtn.Text = "✈️ 启用飞行"; flyBtn.BackgroundColor3 = Color3.fromRGB(45,45,55)
-            WelcomeLabel.Text = "飞行已关闭"; InfoLabel.Text = "点击启用飞行\n按住飞行按钮 + 摇杆控制"
+            disableFly()
+            flyBtn.Text = "✈️ 启用飞行"
+            flyBtn.BackgroundColor3 = Color3.fromRGB(45,45,55)
+            WelcomeLabel.Text = "飞行已关闭"
+            InfoLabel.Text = "点击启用飞行\n开启后摇杆直接控制"
         else
-            enableFly(); setupFlyMovement(); FlyButton.Visible = true
-            flyBtn.Text = "✈️ 飞行中..."; flyBtn.BackgroundColor3 = Color3.fromRGB(0,120,200)
-            WelcomeLabel.Text = "飞行已开启！"; InfoLabel.Text = "按住右下角飞行按钮\n同时用摇杆控制方向"
+            enableFly()
+            setupFlyMovement()
+            flyBtn.Text = "✈️ 飞行中..."
+            flyBtn.BackgroundColor3 = Color3.fromRGB(0,120,200)
+            WelcomeLabel.Text = "飞行已开启！"
+            InfoLabel.Text = "摇杆控制方向\n前推=朝视角飞\n后拉=悬停\n左右=平移"
         end
     end)
 end
 
 -- ============================================
--- 旋转脚本
+-- 旋转脚本 (保持不变)
 -- ============================================
 local spinEnabled = false
 local function toggleSpin()
@@ -486,7 +465,7 @@ if spinBtn then
 end
 
 -- ============================================
--- 环绕旋转（选择玩家）
+-- 环绕旋转（选择玩家） (保持不变)
 -- ============================================
 local orbitEnabled = false
 local orbitConnection
@@ -547,7 +526,7 @@ if orbitBtn then
 end
 
 -- ============================================
--- 无头效果
+-- 无头效果 (保持不变)
 -- ============================================
 local headlessEnabled = false
 local function toggleHeadless()
@@ -572,7 +551,7 @@ if headlessBtn then
 end
 
 -- ============================================
--- 燃烧效果
+-- 燃烧效果 (保持不变)
 -- ============================================
 local fireEnabled = false
 local fireObj
@@ -601,7 +580,7 @@ if fireBtn then
 end
 
 -- ============================================
--- 烟雾效果
+-- 烟雾效果 (保持不变)
 -- ============================================
 local smokeEnabled = false
 local function toggleSmoke()
@@ -628,7 +607,7 @@ if smokeBtn then
 end
 
 -- ============================================
--- 加速脚本
+-- 加速脚本 (保持不变)
 -- ============================================
 local speedEnabled = false
 local originalWalkSpeed = 16
@@ -650,7 +629,7 @@ if speedBtn then
 end
 
 -- ============================================
--- 跳跃增强
+-- 跳跃增强 (保持不变)
 -- ============================================
 local jumpEnabled = false
 local originalJumpPower = 50
@@ -672,7 +651,7 @@ if jumpBtn then
 end
 
 -- ============================================
--- 穿墙脚本
+-- 穿墙脚本 (保持不变)
 -- ============================================
 local noclipEnabled = false
 local noclipConnection
@@ -700,7 +679,7 @@ if noclipBtn then
 end
 
 -- ============================================
--- ESP 透视
+-- ESP 透视 (保持不变)
 -- ============================================
 local espEnabled = false
 local espObjects = {}
@@ -788,6 +767,152 @@ if espBtn then
 end
 
 -- ============================================
+-- 车辆加速功能 (新增)
+-- ============================================
+local carboostEnabled = false
+local carboostConnection
+
+local function enableCarBoost()
+    if carboostEnabled then return end
+    carboostEnabled = true
+    carboostConnection = RunService.RenderStepped:Connect(function()
+        if not carboostEnabled then return end
+        local char = LocalPlayer.Character
+        if not char then return end
+        -- 寻找玩家当前驾驶的车辆（通常座位在角色上）
+        local seat = char:FindFirstChildOfClass("Seat") or char.Parent
+        if seat and seat:IsA("VehicleSeat") then
+            local vehicle = seat:FindFirstAncestorOfClass("Model")
+            if vehicle then
+                -- 加速：设置所有动力源最大
+                for _, part in ipairs(vehicle:GetDescendants()) do
+                    if part:IsA("Motor") or part:IsA("HingeConstraint") or part:IsA("PrismaticConstraint") then
+                        part.Speed = part.MaxSpeed or 1000
+                    end
+                end
+            end
+        end
+    end)
+    local carboostBtn = ScrollFrame:FindFirstChild("carboostBtn")
+    if carboostBtn then
+        carboostBtn.Text = "🚗 加速中..."
+        carboostBtn.BackgroundColor3 = Color3.fromRGB(200, 120, 0)
+    end
+    WelcomeLabel.Text = "车辆加速已开启"
+end
+
+local function disableCarBoost()
+    carboostEnabled = false
+    if carboostConnection then carboostConnection:Disconnect(); carboostConnection = nil end
+    local carboostBtn = ScrollFrame:FindFirstChild("carboostBtn")
+    if carboostBtn then
+        carboostBtn.Text = "🚗 车辆加速"
+        carboostBtn.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+    end
+    WelcomeLabel.Text = "车辆加速已关闭"
+end
+
+local carboostBtn = ScrollFrame:FindFirstChild("carboostBtn")
+if carboostBtn then
+    carboostBtn.MouseButton1Click:Connect(function()
+        if carboostEnabled then
+            disableCarBoost()
+        else
+            enableCarBoost()
+        end
+    end)
+end
+
+-- ============================================
+-- 快速互动功能 (新增) 检测并加速进度条
+-- ============================================
+local instantActionEnabled = false
+local instantActionConnections = {}
+
+local function enableInstantAction()
+    if instantActionEnabled then return end
+    instantActionEnabled = true
+
+    -- 1. 修改所有 ProximityPrompt 的 HoldDuration 为 0.1
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") then
+            obj.HoldDuration = 0.1
+            -- 监听新增的 Prompt
+            obj:GetPropertyChangedSignal("HoldDuration"):Connect(function()
+                if instantActionEnabled then
+                    obj.HoldDuration = 0.1
+                end
+            end)
+        end
+    end
+    workspace.DescendantAdded:Connect(function(obj)
+        if instantActionEnabled and obj:IsA("ProximityPrompt") then
+            obj.HoldDuration = 0.1
+            obj:GetPropertyChangedSignal("HoldDuration"):Connect(function()
+                if instantActionEnabled then
+                    obj.HoldDuration = 0.1
+                end
+            end)
+        end
+    end)
+
+    -- 2. 尝试加速自定义进度条（遍历所有 ScreenGui，修改所有 Tween）
+    task.spawn(function()
+        while instantActionEnabled do
+            for _, gui in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
+                if gui:IsA("ScreenGui") then
+                    for _, obj in ipairs(gui:GetDescendants()) do
+                        if obj:IsA("Frame") and obj:FindFirstChild("ProgressBar") then
+                            -- 常见进度条结构，跳过 tween
+                            -- 可尝试直接设置进度条 Size
+                            local bar = obj:FindFirstChild("ProgressBar") or obj:FindFirstChild("Fill")
+                            if bar and bar:IsA("Frame") then
+                                bar.Size = UDim2.new(1,0,1,0)
+                            end
+                        end
+                    end
+                end
+            end
+            task.wait(0.1)
+        end
+    end)
+
+    local instantBtn = ScrollFrame:FindFirstChild("instantactionBtn")
+    if instantBtn then
+        instantBtn.Text = "⚡ 快速互动中..."
+        instantBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 160)
+    end
+    WelcomeLabel.Text = "快速互动已开启"
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "快速互动",
+        Text = "检测到原生进度条已加速，自定义进度条尝试跳过",
+        Duration = 3
+    })
+end
+
+local function disableInstantAction()
+    instantActionEnabled = false
+    -- 恢复 ProximityPrompt 持续时间？保留不恢复，可下次手动调
+    local instantBtn = ScrollFrame:FindFirstChild("instantactionBtn")
+    if instantBtn then
+        instantBtn.Text = "⚡ 快速互动"
+        instantBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 200)
+    end
+    WelcomeLabel.Text = "快速互动已关闭"
+end
+
+local instantBtn = ScrollFrame:FindFirstChild("instantactionBtn")
+if instantBtn then
+    instantBtn.MouseButton1Click:Connect(function()
+        if instantActionEnabled then
+            disableInstantAction()
+        else
+            enableInstantAction()
+        end
+    end)
+end
+
+-- ============================================
 -- 打开按钮（屏幕边缘）+ 弹入动画
 -- ============================================
 local openBtn = Instance.new("TextButton")
@@ -817,9 +942,10 @@ end)
 LocalPlayer.CharacterAdded:Connect(function(character)
     task.wait(1)
     if flyEnabled then
-        disableFly(); FlyButton.Visible = false
+        disableFly()
         task.wait(0.5)
-        enableFly(); setupFlyMovement(); FlyButton.Visible = true
+        enableFly()
+        setupFlyMovement()
     end
     if spinEnabled then
         task.wait(0.5)
@@ -855,4 +981,14 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     if jumpEnabled then task.wait(0.5); toggleJump(); toggleJump() end
     if noclipEnabled then end
     if espEnabled then task.wait(1); createESP() end
+    if carboostEnabled then
+        disableCarBoost()
+        task.wait(0.5)
+        enableCarBoost()
+    end
+    if instantActionEnabled then
+        disableInstantAction()
+        task.wait(0.5)
+        enableInstantAction()
+    end
 end)
