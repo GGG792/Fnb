@@ -1,16 +1,15 @@
 -- ============================================
--- F脚本中心 - 测试版 (仅原始功能)
--- 大字提醒这是测试版
+-- F脚本中心 - 测试版 (仅基础功能，红色大字提示)
+-- 飞行：一键启动，摇杆直接控制
 -- ============================================
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Camera = workspace.CurrentCamera
 
 -- ============================================
--- 测试版大字提示
+-- 测试版大字提示（停留3秒）
 -- ============================================
 spawn(function()
     local screenSize = Camera.ViewportSize
@@ -143,7 +142,7 @@ InfoLabel.Parent = ContentFrame
 InfoLabel.Size = UDim2.new(1, -20, 0, 120)
 InfoLabel.Position = UDim2.new(0, 10, 0, 45)
 InfoLabel.BackgroundTransparency = 1
-InfoLabel.Text = "测试版仅包含基础功能\n按住飞行按钮 + 摇杆控制飞行"
+InfoLabel.Text = "测试版仅包含基础功能\n开启飞行后摇杆直接控制"
 InfoLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
 InfoLabel.TextSize = 12
 InfoLabel.Font = Enum.Font.Gotham
@@ -166,7 +165,7 @@ local PlayerScroll = Instance.new("ScrollingFrame"); PlayerScroll.Parent = Playe
 local PlayerListLayout = Instance.new("UIListLayout"); PlayerListLayout.Parent = PlayerScroll; PlayerListLayout.Padding = UDim.new(0,5)
 
 -- ============================================
--- 功能按钮列表（仅原始10个功能）
+-- 功能按钮列表（仅基础10个功能）
 -- ============================================
 local scripts = {
     {name = "✈️ 启用飞行", color = Color3.fromRGB(0, 162, 255), id = "fly"},
@@ -210,103 +209,41 @@ for i, scriptInfo in ipairs(scripts) do
 end
 
 -- ============================================
--- 飞行系统（原始版本：浮动按钮 + 摇杆）
+-- 飞行系统（无按钮，开启即飞）
 -- ============================================
 local flyEnabled = false
 local flySpeed = 50
 local bodyVelocity, bodyGyro
 local flyConnection
-local flyButtonDown = false
-
--- 浮动飞行按钮
-local FlyButton = Instance.new("TextButton")
-FlyButton.Parent = ScreenGui
-FlyButton.Size = UDim2.new(0, 80, 0, 80)
-FlyButton.Position = UDim2.new(1, -100, 1, -120)
-FlyButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
-FlyButton.Text = "✈️"
-FlyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-FlyButton.TextSize = 36
-FlyButton.Font = Enum.Font.GothamBlack
-FlyButton.BorderSizePixel = 0
-FlyButton.Visible = false
-FlyButton.Active = true
-
-local FlyButtonCorner = Instance.new("UICorner")
-FlyButtonCorner.CornerRadius = UDim.new(1, 0)
-FlyButtonCorner.Parent = FlyButton
-
-local FlyButtonStroke = Instance.new("UIStroke")
-FlyButtonStroke.Color = Color3.fromRGB(255, 255, 255)
-FlyButtonStroke.Thickness = 3
-FlyButtonStroke.Transparency = 0.5
-FlyButtonStroke.Parent = FlyButton
 
 local function enableFly()
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    local char = LocalPlayer.Character; if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
     flyEnabled = true
-    bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-    bodyVelocity.Parent = hrp
-    bodyGyro = Instance.new("BodyGyro")
-    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bodyGyro.P = 9e4
-    bodyGyro.Parent = hrp
+    bodyVelocity = Instance.new("BodyVelocity"); bodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9); bodyVelocity.Velocity = Vector3.new(0,0,0); bodyVelocity.Parent = hrp
+    bodyGyro = Instance.new("BodyGyro"); bodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9); bodyGyro.P = 9e4; bodyGyro.Parent = hrp
 end
 
 local function disableFly()
     flyEnabled = false
-    flyButtonDown = false
-    if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
-    if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
-    if flyConnection then flyConnection:Disconnect() flyConnection = nil end
+    if bodyVelocity then bodyVelocity:Destroy(); bodyVelocity = nil end
+    if bodyGyro then bodyGyro:Destroy(); bodyGyro = nil end
+    if flyConnection then flyConnection:Disconnect(); flyConnection = nil end
 end
 
-FlyButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        flyButtonDown = true
-        FlyButton.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
-        FlyButtonStroke.Transparency = 0
-    end
-end)
-
-FlyButton.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        flyButtonDown = false
-        FlyButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
-        FlyButtonStroke.Transparency = 0.5
-        if bodyVelocity then bodyVelocity.Velocity = Vector3.new(0, 0, 0) end
-    end
-end)
-
 local function setupFlyMovement()
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hum = char:FindFirstChild("Humanoid")
-    if not hum then return end
+    local char = LocalPlayer.Character; if not char then return end
+    local hum = char:FindFirstChild("Humanoid"); if not hum then return end
     flyConnection = RunService.RenderStepped:Connect(function()
         if not flyEnabled or not bodyVelocity then return end
-        if not flyButtonDown then
-            bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        local moveDir = hum.MoveDirection
+        if moveDir.Magnitude == 0 then
+            bodyVelocity.Velocity = Vector3.new(0,0,0)
             return
         end
-        local moveDir = hum.MoveDirection
         local look = Camera.CFrame.LookVector
         local right = Camera.CFrame.RightVector
-        local fwdDot = moveDir:Dot(look)
-        local sideDot = moveDir:Dot(right)
-        local vel = Vector3.new(0,0,0)
-        if fwdDot > 0.1 then
-            vel = look * flySpeed
-        elseif fwdDot < -0.1 then
-            vel = Vector3.new(0,0,0)
-        elseif math.abs(sideDot) > 0.1 then
-            vel = right * math.sign(sideDot) * flySpeed
-        end
+        local vel = look * moveDir.Z * flySpeed + right * moveDir.X * flySpeed
         bodyVelocity.Velocity = vel
         if bodyGyro and char:FindFirstChild("HumanoidRootPart") then
             bodyGyro.CFrame = CFrame.new(char.HumanoidRootPart.Position, char.HumanoidRootPart.Position + look)
@@ -319,19 +256,17 @@ if flyBtn then
     flyBtn.MouseButton1Click:Connect(function()
         if flyEnabled then
             disableFly()
-            FlyButton.Visible = false
             flyBtn.Text = "✈️ 启用飞行"
             flyBtn.BackgroundColor3 = Color3.fromRGB(45,45,55)
             WelcomeLabel.Text = "飞行已关闭"
-            InfoLabel.Text = "点击启用飞行\n按住飞行按钮 + 摇杆控制"
+            InfoLabel.Text = "点击启用飞行\n开启后摇杆直接控制"
         else
             enableFly()
             setupFlyMovement()
-            FlyButton.Visible = true
             flyBtn.Text = "✈️ 飞行中..."
             flyBtn.BackgroundColor3 = Color3.fromRGB(0,120,200)
             WelcomeLabel.Text = "飞行已开启！"
-            InfoLabel.Text = "按住右下角飞行按钮\n同时用摇杆控制方向\n前推=朝视角飞\n后推=悬停\n左右=平移"
+            InfoLabel.Text = "摇杆控制方向\n前推=朝视角飞\n后拉=悬停\n左右=平移"
         end
     end)
 end
@@ -342,19 +277,12 @@ end
 local spinEnabled = false
 local function toggleSpin()
     spinEnabled = not spinEnabled
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    local char = LocalPlayer.Character; if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
     if spinEnabled then
-        local bodyAngVel = Instance.new("BodyAngularVelocity")
-        bodyAngVel.Name = "SpinVelocity"
-        bodyAngVel.AngularVelocity = Vector3.new(0, 20, 0)
-        bodyAngVel.MaxTorque = Vector3.new(0, math.huge, 0)
-        bodyAngVel.Parent = hrp
+        local bav = Instance.new("BodyAngularVelocity"); bav.Name = "SpinVelocity"; bav.AngularVelocity = Vector3.new(0,20,0); bav.MaxTorque = Vector3.new(0,9e9,0); bav.Parent = hrp
     else
-        local existing = hrp:FindFirstChild("SpinVelocity")
-        if existing then existing:Destroy() end
+        local bav = hrp:FindFirstChild("SpinVelocity"); if bav then bav:Destroy() end
     end
 end
 local spinBtn = ScrollFrame:FindFirstChild("spinBtn")
@@ -883,11 +811,9 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     task.wait(1)
     if flyEnabled then
         disableFly()
-        FlyButton.Visible = false
         task.wait(0.5)
         enableFly()
         setupFlyMovement()
-        FlyButton.Visible = true
     end
     if spinEnabled then
         task.wait(0.5)
